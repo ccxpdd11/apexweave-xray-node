@@ -1,0 +1,39 @@
+name: Deploy to ApexWeave
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "ccxpdd11"
+          git config user.email "gvps20261111x7@fldubai.com"
+
+      - name: Install ApexWeave CLI
+        run: |
+          curl -fsSL https://apexweave.com/tools/install | bash
+          echo "$HOME/.apexweave/bin" >> $GITHUB_PATH
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          ls -la ~/.apexweave/bin 2>/dev/null || true
+          which apexweave || find "$HOME" -maxdepth 4 -name apexweave -type f 2>/dev/null | head -5
+
+      - name: Deploy via ApexWeave CLI
+        env:
+          APEXWEAVE_EMAIL: ${{ secrets.APEXWEAVE_EMAIL }}
+          APEXWEAVE_PASSWORD: ${{ secrets.APEXWEAVE_PASSWORD }}
+        run: |
+          set -x
+          apexweave version || true
+          printf '%s\n%s\n' "$APEXWEAVE_EMAIL" "$APEXWEAVE_PASSWORD" | apexweave login
+          apexweave init apexweave-xray-node.apexweaveapp.com
+          git remote -v
+          git push apexweave main
