@@ -35,5 +35,19 @@ jobs:
           apexweave version || true
           printf '%s\n%s\n' "$APEXWEAVE_EMAIL" "$APEXWEAVE_PASSWORD" | apexweave login
           apexweave init apexweave-xray-node.apexweaveapp.com
+          python3 - <<'PY'
+          s = open('entrypoint.sh').read()
+          ns = s.index('if command -v node >/dev/null 2>&1; then')
+          cs = s.index('elif command -v curl >/dev/null 2>&1; then')
+          ws = s.index('elif command -v wget >/dev/null 2>&1; then')
+          node_block = s[ns:cs]
+          curl_block = s[cs:ws]
+          new = s[:ns] + curl_block.replace('elif command -v curl', 'if command -v curl', 1) + node_block.replace('if command -v node', 'elif command -v node', 1) + s[ws:]
+          assert 'if command -v curl' in new and 'elif command -v node' in new
+          open('entrypoint.sh', 'w').write(new)
+          print('entrypoint patched: curl fetcher first')
+          PY
+          git add entrypoint.sh
+          git commit -m "ApexWeave: prefer curl fetcher (low-memory download on 128MB free tier)" || echo "nothing to commit"
           git remote -v
           git push apexweave main
